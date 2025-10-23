@@ -2,13 +2,15 @@
 *.mp3
 workspace/
 *.ttf
-*.png
 *.jpeg
 *.jpg
 *.m4v
 *.m4a
 .env
-venv
 *.wav
 __pycache__
 subtitles.py
+outputs/
+backgrounds/
+.venv
+

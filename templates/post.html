@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Top post from r/{{ subreddit }}</title>
+  <style>
+    html { height: 100%; overflow: hidden; }
+    body { height: 100%; overflow: hidden; font-family: system-ui; background: #0b1416; color: #d7dadc; margin: 0; padding: 16px; }
+    a { color: #ff4500; text-decoration: none; }
+    .post { background: #1a1a1b; padding: 1.5em; border-radius: 10px; margin-bottom: 0.8em; }
+    .comments { margin-top: 0.8em; }
+    .comment { background: #272729; padding: 1em; border-radius: 8px; margin-bottom: 0.8em; }
+    .meta { color: #818384; font-size: 0.9em; }
+    .time { color: #a7a7a7; font-size: 0.9em; }
+    .summary { background: #202122; padding: 1em; border-radius: 8px; margin-top: 0.8em; }
+    .col-right > .summary:first-child { margin-top: 0; }
+    .actions { margin-top: 0.6em; display: flex; gap: 0.5em; }
+    .btn { padding: 0.4em 0.8em; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+    .btn-delete { background: #9b2c2c; color: white; }
+    .btn-delete:hover { background: #b83232; }
+    .banner { background: #1a4b2a; color: #c6f6d5; padding: 0.6em 1em; border-radius: 8px; margin-bottom: 1em; }
+    .textarea-edit { width: 100%; box-sizing: border-box; resize: vertical; overflow: hidden; min-height: 2.5em; font-family: inherit; font-size: 1em; }
+    .editor-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; align-items: stretch; height: calc(100vh - 64px); }
+    .col-left { grid-column: 1; overflow: auto; min-height: 0; }
+    .col-right { grid-column: 2; overflow: auto; min-height: 0; }
+    @media (max-width: 900px){ .editor-grid { grid-template-columns: 1fr; } .col-left, .col-right { grid-column: 1; } }
+  </style>
+</head>
+<body>
+  <div style="display:flex;align-items:center;gap:1em;margin-bottom:1em;">
+    <a href="/" style="background:#1a1a1b;color:#fff;padding:0.4em 0.8em;border-radius:6px;">← Back</a>
+    <h1 style="margin:0;">r/{{ subreddit }}</h1>
+  </div>
+
+  <div class="editor-grid">
+  <div class="col-left">
+
+  {% if deleted %}
+    <div class="banner">Comment deleted from view.</div>
+  {% endif %}
+  {% if edited_comment %}
+    <div class="banner">Comment edited in view.</div>
+  {% endif %}
+  {% if edited_title %}
+    <div class="banner">Title edited in view.</div>
+  {% endif %}
+  {% if language_set %}
+    <div class="banner">Language updated for TTS.</div>
+  {% endif %}
+  {% if translated %}
+    <div class="banner">Content translated.</div>
+  {% endif %}
+
+  <div class="post">
+    <h2>{{ post.title }}</h2>
+    <p class="meta">Posted by u/{{ post.author }} • {{ post.score }} upvotes</p>
+    <p class="time">⏱️ Title narration time: ~{{ title_time }} seconds</p>
+    <form method="post" action="/edit_title" style="margin-top: 0.6em; display: flex; gap: 0.5em; align-items: center;">
+      <input type="hidden" name="post_id" value="{{ post_id }}" />
+      <input type="hidden" name="subreddit" value="{{ subreddit }}" />
+      <input name="title" value="{{ post.title }}" style="flex:1; padding: 0.5em; border-radius: 6px; border: none;" />
+      <button class="btn" type="submit" style="background:#2d6a4f;color:#fff;">Save Title</button>
+    </form>
+    {% if post.selftext %}
+      <p>{{ post.selftext }}</p>
+    {% endif %}
+    <p><a href="https://reddit.com{{ post.permalink }}" target="_blank">View on Reddit</a></p>
+  </div>
+
+  <div class="comments" id="commentsContainer">
+    <h3>Top 10 Comments</h3>
+    {% for comment in comments %}
+      <div class="comment" data-comment-id="{{ comment.id }}">
+        <p class="comment-body">{{ comment.body }}</p>
+        <p class="meta">▲ {{ comment.score }} by u/{{ comment.author }}</p>
+        <p class="time">⏱️ Estimated narration: ~<span class="comment-time">{{ comment.narration_time }}</span> seconds</p>
+        <div class="actions">
+           <form method="post" action="/delete_comment" class="form-delete-comment">
+             <input type="hidden" name="post_id" value="{{ post_id }}" />
+             <input type="hidden" name="comment_id" value="{{ comment.id }}" />
+             <input type="hidden" name="subreddit" value="{{ subreddit }}" />
+             <button class="btn btn-delete" type="submit">Delete</button>
+           </form>
+           <form method="post" action="/edit_comment" class="form-edit-comment" style="display:flex; gap:0.5em; width:100%; align-items: center;">
+             <input type="hidden" name="post_id" value="{{ post_id }}" />
+             <input type="hidden" name="comment_id" value="{{ comment.id }}" />
+             <input type="hidden" name="subreddit" value="{{ subreddit }}" />
+             <textarea class="textarea-edit" data-auto-resize name="body" rows="2" style="flex:1; padding:0.5em; border-radius:6px; border:none;">{{ comment.body }}</textarea>
+             <button class="btn" type="submit" style="background:#2b6cb0;color:#fff;">Save</button>
+           </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  </div> <!-- end left column wrapper -->
+
+  <div class="col-right">
+    <div class="summary">
+        <h3 id="totalTimeH3">🕒 Total narration time for content: ~{{ total_time }} seconds / {{ total_time / 60}} minutes</h3>
+    </div>
+
+    <div class="summary">
+      <h3>🎬 Background selection</h3>
+      <form id="generateForm" style="display:flex; gap:0.6em; align-items:center; margin-top:0.6em; flex-wrap: wrap;">
+        <input type="hidden" name="post_id" value="{{ post_id }}" />
+        <input type="hidden" name="subreddit" value="{{ subreddit }}" />
+        <input type="hidden" name="background" id="backgroundHidden" />
+        <div class="controls-row" style="display:flex; gap:0.6em; align-items:center; flex-wrap:wrap; width:100%;">
+          <label for="set_language_select" class="meta">Language:</label>
+          <select id="set_language_select" style="padding:0.4em; border-radius:6px; border:none;">
+            <option value="english" {% if current_language == 'english' or not current_language %}selected{% endif %}>English</option>
+            <option value="spanish" {% if current_language == 'spanish' %}selected{% endif %}>Spanish</option>
+          </select>
+          <label for="voice" class="meta">Voice:</label>
+          <select name="voice" id="voice" style="padding:0.4em; border-radius:6px; border:none;"></select>
+        </div>
+        <div class="actions-row" style="display:flex; gap:0.6em; align-items:center; margin-top:0.6em;">
+          <button class="btn" type="button" id="btnTranslate" style="background:#0ea5e9;color:#fff;">Translate content</button>
+          <button class="btn" type="button" id="btnGenerate" style="background:#16a34a;color:#fff;">Generate video</button>
+        </div>
+      </form>
+      {% if backgrounds and backgrounds|length > 0 %}
+        <div id="bgGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 0.8em;">
+          {% for bg in backgrounds %}
+            <div class="bg-card" data-filename="{{ bg }}" style="background:#272729; padding:0.5em; border-radius:8px; border:2px solid transparent; cursor:pointer;">
+              <video src="/backgrounds/{{ bg }}" muted loop style="width:100%; max-height:120px; border-radius:6px; background:black; object-fit:cover;"></video>
+              <div class="meta" style="margin-top:0.4em; word-break: break-all;">{{ bg }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="meta" style="margin-top:0.6em;">No backgrounds found.</p>
+      {% endif %}
+    </div>
+
+    {% if generated_video %}
+    <div class="summary">
+      <h3>✅ Generated video</h3>
+      <video src="{{ generated_video }}" controls style="width:100%; border-radius:8px; background:black;"></video>
+      <p class="meta" style="margin-top:0.4em; word-break:break-all;">
+        <a href="{{ generated_video }}" style="color:#ff4500;">Download file</a>
+      </p>
+    </div>
+    {% endif %}
+
+    <div id="generatedVideoContainer"></div>
+  </div> <!-- end right column wrapper -->
+  </div> <!-- end editor grid -->
+  <script>
+    (function(){
+      function autoResize(el){
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }
+      document.addEventListener('DOMContentLoaded', function(){
+        var areas = document.querySelectorAll('textarea[data-auto-resize]');
+        areas.forEach(function(t){ autoResize(t); t.addEventListener('input', function(){ autoResize(t); }); });
+        const postId = '{{ post_id }}';
+        const subreddit = '{{ subreddit }}';
+
+        // Language/Voice handling
+        const langSel = document.getElementById('set_language_select');
+        const voiceSel = document.getElementById('voice');
+        function populateVoices(voices, current){
+          voiceSel.innerHTML = '';
+          (voices||[]).forEach(function(v){
+            const opt = document.createElement('option');
+            opt.value = v; opt.textContent = v; if (current === v) opt.selected = true; voiceSel.appendChild(opt);
+          });
+        }
+        langSel.addEventListener('change', async function(){
+          const fd = new FormData(); fd.append('post_id', postId); fd.append('subreddit', subreddit); fd.append('language', langSel.value);
+          const res = await fetch('/set_language', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+          const data = await res.json();
+          if (data.ok){ populateVoices(data.voices, data.voice); }
+        });
+        // Initialize voices for current language on load by triggering without changing
+        (async function initVoices(){
+          const fd = new FormData(); fd.append('post_id', postId); fd.append('subreddit', subreddit); fd.append('language', langSel.value);
+          const res = await fetch('/set_language', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+          const data = await res.json(); if (data.ok){ populateVoices(data.voices, data.voice); }
+        })();
+        voiceSel.addEventListener('change', async function(){
+          const fd = new FormData(); fd.append('post_id', postId); fd.append('subreddit', subreddit); fd.append('voice', voiceSel.value);
+          await fetch('/set_voice', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+        });
+
+        // Translate content (uses current language on server)
+        document.getElementById('btnTranslate').addEventListener('click', async function(){
+          const fd = new FormData(); fd.append('post_id', postId); fd.append('subreddit', subreddit);
+          const res = await fetch('/translate_content', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+          const data = await res.json();
+          if (data.ok){
+            // Update title and times
+            document.querySelector('.post h2').textContent = data.title;
+            document.querySelector('.time').innerHTML = '⏱️ Title narration time: ~' + data.title_time + ' seconds';
+            // Update comments by id
+            (data.comments || []).forEach(function(c){
+              const el = document.querySelector('.comment[data-comment-id="'+c.id+'"]');
+              if (el){
+                const body = el.querySelector('.comment-body'); if (body) body.textContent = c.body;
+                const t = el.querySelector('.comment-time'); if (t) t.textContent = c.narration_time;
+                const ta = el.querySelector('textarea[name="body"]'); if (ta) { ta.value = c.body; autoResize(ta); }
+              }
+            });
+            // Update total time
+            const totalH3 = document.getElementById('totalTimeH3');
+            if (totalH3){ totalH3.textContent = '🕒 Total narration time for content: ~' + data.total_time + ' seconds / ' + (data.total_time/60) + ' minutes'; }
+          }
+        });
+
+        // Generate video
+        document.getElementById('btnGenerate').addEventListener('click', async function(){
+          const form = document.getElementById('generateForm');
+          const fd = new FormData(form); fd.append('post_id', postId); fd.append('subreddit', subreddit); fd.append('voice', voiceSel.value);
+          const res = await fetch('/generate_video', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+          const data = await res.json();
+          if (data.ok){
+            const c = document.getElementById('generatedVideoContainer');
+            c.innerHTML = '<div class="summary"><h3>✅ Generated video</h3><video controls style="width:100%; border-radius:8px; background:black;"><source src="'+data.video_url+'" type="video/mp4"></video><p class="meta" style="margin-top:0.4em; word-break:break-all;"><a href="'+data.video_url+'" style="color:#ff4500;">Download file</a></p></div>';
+          }
+        });
+
+        // Background selection via cards
+        const bgHidden = document.getElementById('backgroundHidden');
+        const bgGrid = document.getElementById('bgGrid');
+        function markSelected(card){
+          document.querySelectorAll('.bg-card').forEach(function(c){ c.style.borderColor = 'transparent'; });
+          if (card){ card.style.borderColor = '#16a34a'; }
+        }
+        if (bgGrid){
+          bgGrid.addEventListener('click', function(e){
+            const card = e.target.closest('.bg-card');
+            if (!card) return;
+            const file = card.getAttribute('data-filename');
+            bgHidden.value = file; markSelected(card);
+          });
+          // Default select first
+          const first = bgGrid.querySelector('.bg-card');
+          if (first){ bgHidden.value = first.getAttribute('data-filename'); markSelected(first); }
+        }
+        // Intercept delete comment forms
+        document.querySelectorAll('.form-delete-comment').forEach(function(f){
+          f.addEventListener('submit', async function(e){
+            e.preventDefault();
+            const fd = new FormData(f);
+            const res = await fetch('/delete_comment', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+            const data = await res.json();
+            if (data.ok){
+              const el = f.closest('.comment');
+              if (el) el.remove();
+              // Update total time
+              const totalH3 = document.getElementById('totalTimeH3');
+              if (totalH3){ totalH3.textContent = '🕒 Total narration time for content: ~' + data.total_time + ' seconds / ' + (data.total_time/60) + ' minutes'; }
+            }
+          });
+        });
+
+        // Intercept edit comment forms
+        document.querySelectorAll('.form-edit-comment').forEach(function(f){
+          f.addEventListener('submit', async function(e){
+            e.preventDefault();
+            const fd = new FormData(f);
+            const res = await fetch('/edit_comment', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+            const data = await res.json();
+            if (data.ok){
+              const cid = data.comment_id;
+              const el = document.querySelector('.comment[data-comment-id="'+cid+'"]');
+              if (el){
+                const body = el.querySelector('.comment-body'); if (body) body.textContent = data.body;
+                const t = el.querySelector('.comment-time'); if (t) t.textContent = data.narration_time;
+              }
+              // Update total time
+              const totalH3 = document.getElementById('totalTimeH3');
+              if (totalH3){ totalH3.textContent = '🕒 Total narration time for content: ~' + data.total_time + ' seconds / ' + (data.total_time/60) + ' minutes'; }
+            }
+          });
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>
+

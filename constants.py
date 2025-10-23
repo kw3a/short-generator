@@ -82,3 +82,4 @@ class Config:
         return ["spanish", "english"]  
 
 config = Config()
+

@@ -8,7 +8,7 @@ word_timestamps = []
 
 voices = {
         'spanish': 'es-MX-JorgeNeural',
-        'english': 'en-US-AndrewNeural',
+        'english': 'en-US-KaiNeural',
 }
 def getAzureVoice(language):
     return voices[language]
@@ -64,3 +64,4 @@ if __name__ == "__main__":
     f = "azureTTSenglishmulti.wav"
     subs = TTSAzure(speech_key, service_region, "Hello, this is Ava.", v, f)
     print(subs)
+

@@ -1,8 +1,8 @@
-Run
-```shell
-python contentGen.py
-python main.py
+### INSTALLATION
+Rename .env.copy as .env, fill api keys and run the next commands:
 ```
-The first file generates the scripts. The second generates video based on that scripts
-
-You must have fonts and background videos prepared in advance
+pip install -r requirements.txt
+flask run
+```
+>You must have background videos prepared in advance (backgrounds/ directory).
+>Created videos will be available in outputs/ directory.
